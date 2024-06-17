@@ -15,9 +15,7 @@ from .data_source import (
     ImageSource,
     ImageUrl,
     User,
-    QQUser,
-    check_user_id,
-    user_avatar,
+    QQUser
 )
 from .utils import split_text
 
@@ -74,7 +72,7 @@ async def split_msg_v11(
 
     for msg_seg in msg:
         if msg_seg.type == "at":
-            image_sources.append(user_avatar(str(msg_seg.data["qq"])))
+            image_sources.append(ImageUrl(event.avatar))
             users.append(QQUser(bot, event, int(msg_seg.data["qq"])))
 
         elif msg_seg.type == "image":
@@ -91,21 +89,16 @@ async def split_msg_v11(
                     image_sources.append(ImageUrl(url=each_msg.data["url"]))
                     break
             else:
-                image_sources.append(user_avatar(source_qq))
+                image_sources.append(ImageUrl(event.avatar))
                 users.append(QQUser(bot, event, int(source_qq)))
 
         elif msg_seg.type == "text":
             raw_text = msg_seg.data["text"]
             split_msg = split_text(raw_text)
             for text in split_msg:
-                if text.startswith("@") and check_user_id(text[1:]):
-                    user_id = text[1:]
-                    image_sources.append(user_avatar(user_id))
-                    users.append(QQUser(bot, event, int(user_id)))
-
-                elif text == "自己":
+                if text == "自己":
                     image_sources.append(
-                        user_avatar(str(event.user_id))
+                        ImageUrl(event.avatar)
                     )
                     users.append(QQUser(bot, event, event.user_id))
 
@@ -114,14 +107,14 @@ async def split_msg_v11(
 
     # 当所需图片数为 2 且已指定图片数为 1 时，使用 发送者的头像 作为第一张图
     if meme.params_type.min_images == 2 and len(image_sources) == 1:
-        image_sources.insert(0, user_avatar(str(event.user_id)))
+        image_sources.insert(0, ImageUrl(event.avatar))
         users.insert(0, QQUser(bot, event, event.user_id))
 
     # 当所需图片数为 1 且没有已指定图片时，使用发送者的头像
     if memes_use_sender_when_no_image and (
             meme.params_type.min_images == 1 and len(image_sources) == 0
     ):
-        image_sources.append(user_avatar(str(event.user_id)))
+        image_sources.append(ImageUrl(event.avatar))
         users.append(QQUser(bot, event, event.user_id))
 
     # 当所需文字数 >0 且没有输入文字时，使用默认文字

@@ -5,6 +5,7 @@ import hashlib
 import os
 import random
 import traceback
+import json
 from io import BytesIO
 from itertools import chain
 from pathlib import Path
@@ -51,12 +52,6 @@ sv = Service(
     help_=sv_help  # 帮助文本
 )
 
-
-@sv.on_fullmatch(["帮助头像表情包"])
-async def bangzhu_text(bot: HoshinoBot, ev: CQEvent):
-    await bot.send(ev, sv_help, at_sender=True)
-
-
 def bytesio2b64(img: Union[BytesIO, bytes]) -> str:
     if isinstance(img, BytesIO):
         img = img.getvalue()
@@ -69,6 +64,10 @@ def get_user_id(ev: CQEvent, permit: Union[int, None] = None):
     else:
         cid = f"{ev.self_id}_{ev.group_id}"
     return cid
+
+def button_gen(is_enter,lable,data):
+    return {"render_data": {"label": lable,"visited_label": lable,"style":1},
+            "action": {"type": 2 ,"permission": {"type": 2,},"enter":is_enter,"unsupport_tips":"兼容文本","data": data}}
 
 
 @sv.on_fullmatch(("表情包制作", "头像表情包", "文字表情包"))
@@ -103,10 +102,17 @@ async def help_cmd(bot: HoshinoBot, ev: CQEvent):
     else:
         img = BytesIO(meme_list_cache_file.read_bytes())
 
-    msg = "触发方式：“关键词 + 图片/文字”\n发送 “表情详情 + 关键词” 查看表情参数和预览\n目前支持的表情列表："
+    msg = "触发方式：“@古贺小春 + 关键词 + 图片/文字”\n发送 “表情详情 + 关键词” 查看表情参数和预览\n图片参数不足时将会使用发送者的头像\n暂不支持@他人作为图片参数\n目前支持的表情列表："
 
-    await bot.finish(ev, msg + MessageSegment.image(bytesio2b64(img)))
-
+    await bot.send(ev, msg + MessageSegment.image(bytesio2b64(img)))
+    data = {
+    "markdown":{"custom_template_id": "102021217_1710070483",},        
+    "keyboard": {"content" :{"rows": [{
+                    "buttons": [button_gen(False,"表情详情","表情详情"),button_gen(False,"试一试","")]
+                    }]}}}
+    raw_data = base64.b64encode(str(json.dumps(data,ensure_ascii=False)).encode()).decode("utf-8")
+    msg = f'[CQ:markdown,data=base64://{raw_data}]'
+    await bot.finish(ev, msg)
 
 @sv.on_prefix(("表情帮助", "表情示例", "表情详情"))
 async def info_cmd(bot: HoshinoBot, ev: CQEvent):
@@ -122,85 +128,6 @@ async def info_cmd(bot: HoshinoBot, ev: CQEvent):
     img = await meme.generate_preview()
 
     await bot.finish(ev, info + MessageSegment.image(bytesio2b64(img)))
-
-
-@sv.on_prefix("禁用表情")
-async def block_cmd(bot: HoshinoBot, ev: CQEvent):
-    meme_names = ev.message.extract_plain_text().strip().split()
-    user_id: str = get_user_id(ev)
-    if not meme_names:
-        await bot.finish(ev, "参数出错，请重新输入")
-    results = meme_manager.block(user_id, meme_names)
-    messages = []
-    for name, result in results.items():
-        if result == ActionResult.SUCCESS:
-            message = f"表情 {name} 禁用成功"
-        elif result == ActionResult.NOTFOUND:
-            message = f"表情 {name} 不存在！"
-        else:
-            message = f"表情 {name} 禁用失败"
-        messages.append(message)
-    await bot.finish(ev, "\n".join(messages))
-
-
-@sv.on_prefix("启用表情")
-async def unblock_cmd(bot: HoshinoBot, ev: CQEvent):
-    meme_names = ev.message.extract_plain_text().strip().split()
-    user_id: str = get_user_id(ev)
-    if not meme_names:
-        await bot.finish(ev, "参数出错，请重新输入")
-    results = meme_manager.unblock(user_id, meme_names)
-    messages = []
-    for name, result in results.items():
-        if result == ActionResult.SUCCESS:
-            message = f"表情 {name} 启用成功"
-        elif result == ActionResult.NOTFOUND:
-            message = f"表情 {name} 不存在！"
-        else:
-            message = f"表情 {name} 启用失败"
-        messages.append(message)
-    await bot.finish(ev, "\n".join(messages))
-
-
-@sv.on_prefix("全局禁用表情")
-async def block_cmd_gl(bot: HoshinoBot, ev: CQEvent):
-    if not priv.check_priv(ev, priv.ADMIN):
-        await bot.finish(ev, '此命令仅群管可用~')
-    meme_names = ev.message.extract_plain_text().strip().split()
-    if not meme_names:
-        await bot.finish(ev, "参数出错，请重新输入")
-    results = meme_manager.change_mode(MemeMode.WHITE, meme_names)
-    messages = []
-    for name, result in results.items():
-        if result == ActionResult.SUCCESS:
-            message = f"表情 {name} 已设为白名单模式"
-        elif result == ActionResult.NOTFOUND:
-            message = f"表情 {name} 不存在！"
-        else:
-            message = f"表情 {name} 设置失败"
-        messages.append(message)
-    await bot.finish(ev, "\n".join(messages))
-
-
-@sv.on_prefix("全局启用表情")
-async def unblock_cmd_gl(bot: HoshinoBot, ev: CQEvent):
-    if not priv.check_priv(ev, priv.ADMIN):
-        await bot.finish(ev, '此命令仅群管可用~')
-    meme_names = ev.message.extract_plain_text().strip().split()
-    if not meme_names:
-        await bot.finish(ev, "参数出错，请重新输入")
-    results = meme_manager.change_mode(MemeMode.BLACK, meme_names)
-    messages = []
-    for name, result in results.items():
-        if result == ActionResult.SUCCESS:
-            message = f"表情 {name} 已设为黑名单模式"
-        elif result == ActionResult.NOTFOUND:
-            message = f"表情 {name} 不存在！"
-        else:
-            message = f"表情 {name} 设置失败"
-        messages.append(message)
-    await bot.finish(ev, "\n".join(messages))
-
 
 async def process(
         bot: HoshinoBot,

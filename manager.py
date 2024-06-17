@@ -136,7 +136,7 @@ class MemeManager:
         if self.__path.exists():
             with self.__path.open("r", encoding="utf-8") as f:
                 try:
-                    raw_list = yaml.safe_load(f)
+                    raw_list = yaml.unsafe_load(f)
                 except UnicodeDecodeError:
                     hoshino.logger.warning("表情列表解析失败，将重新生成")
         try:
