@@ -102,11 +102,14 @@ async def help_cmd(bot: HoshinoBot, ev: CQEvent):
     else:
         img = BytesIO(meme_list_cache_file.read_bytes())
 
-    msg = "触发方式：“@古贺小春 + 关键词 + 图片/文字”\n发送 “表情详情 + 关键词” 查看表情参数和预览\n图片参数不足时将会使用发送者的头像\n暂不支持@他人作为图片参数\n目前支持的表情列表："
+    msg = "触发方式：“@古贺小春 + 关键词 + 图片/文字”\n发送 “表情详情 + 关键词” 查看表情参数和预览\n图片参数不足时将会使用发送者的头像\n暂不支持@他人作为图片参数\n目前支持的表情列表见上图"
 
     await bot.send(ev, msg + MessageSegment.image(bytesio2b64(img)))
     data = {
-    "markdown":{"custom_template_id": "102021217_1710070483",},        
+    "markdown":{"custom_template_id": "102021217_1710070483",
+                'params':[
+                {'key':'text_1','values':['试试看吧']},
+            ]},        
     "keyboard": {"content" :{"rows": [{
                     "buttons": [button_gen(False,"表情详情","表情详情"),button_gen(False,"试一试","")]
                     }]}}}
