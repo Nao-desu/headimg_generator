@@ -15,6 +15,7 @@ from aiocqhttp.exceptions import ActionFailed
 from hoshino import HoshinoBot, Service, priv
 from hoshino.aiorequests import run_sync_func
 from hoshino.typing import CQEvent, MessageSegment, Message
+from ..groupmaster.switch import sdb
 from meme_generator.download import check_resources
 from meme_generator.exception import (
     TextOverLength,
@@ -72,6 +73,9 @@ def button_gen(is_enter,lable,data):
 
 @sv.on_fullmatch(("表情包制作", "头像表情包", "文字表情包"))
 async def help_cmd(bot: HoshinoBot, ev: CQEvent):
+    status = sdb.get_status(ev.real_group_id,'头像表情包')
+    if not status:
+        return
     memes = sorted(
         meme_manager.memes,
         key=lambda meme: "".join(
@@ -119,6 +123,9 @@ async def help_cmd(bot: HoshinoBot, ev: CQEvent):
 
 @sv.on_prefix(("表情帮助", "表情示例", "表情详情"))
 async def info_cmd(bot: HoshinoBot, ev: CQEvent):
+    status = sdb.get_status(ev.real_group_id,'头像表情包')
+    if not status:
+        return
     meme_name = ev.message.extract_plain_text().strip()
     if not meme_name:
         await bot.finish(ev, "参数出错，请重新输入")
@@ -203,6 +210,9 @@ async def find_meme(
 
 @sv.on_message('group')
 async def handle(bot: HoshinoBot, ev: CQEvent):
+    status = sdb.get_status(ev.real_group_id,'头像表情包')
+    if not status:
+        return
     msg: Message = copy.deepcopy(ev.message)
     if not msg:
         sv.logger.info("Empty msg, skip")
