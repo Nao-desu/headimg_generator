@@ -10,7 +10,8 @@ from io import BytesIO
 from itertools import chain
 from pathlib import Path
 from typing import List, Union, Dict, Any
-
+from hoshino.image_host import upload_img
+from hoshino.MD import *
 from aiocqhttp.exceptions import ActionFailed
 from hoshino import HoshinoBot, Service, priv
 from hoshino.aiorequests import run_sync_func
@@ -66,11 +67,6 @@ def get_user_id(ev: CQEvent, permit: Union[int, None] = None):
         cid = f"{ev.self_id}_{ev.group_id}"
     return cid
 
-def button_gen(is_enter,lable,data):
-    return {"render_data": {"label": lable,"visited_label": lable,"style":1},
-            "action": {"type": 2 ,"permission": {"type": 2,},"enter":is_enter,"unsupport_tips":"兼容文本","data": data}}
-
-
 @sv.on_fullmatch(("表情包制作", "头像表情包", "文字表情包"))
 async def help_cmd(bot: HoshinoBot, ev: CQEvent):
     status = sdb.get_status(ev.real_group_id,'头像表情包')
@@ -105,21 +101,13 @@ async def help_cmd(bot: HoshinoBot, ev: CQEvent):
             f.write(img.getvalue())
     else:
         img = BytesIO(meme_list_cache_file.read_bytes())
-
-    msg = "触发方式：“@古贺小春 + 关键词 + 图片/文字”\n发送 “表情详情 + 关键词” 查看表情参数和预览\n图片参数不足时将会使用发送者的头像\n暂不支持@他人作为图片参数\n目前支持的表情列表见上图"
-
-    await bot.send(ev, msg + MessageSegment.image(bytesio2b64(img)))
-    data = {
-    "markdown":{"custom_template_id": "102021217_1710070483",
-                'params':[
-                {'key':'text_1','values':['试试看吧']},
-            ]},        
-    "keyboard": {"content" :{"rows": [{
-                    "buttons": [button_gen(False,"表情详情","表情详情"),button_gen(False,"试一试","")]
-                    }]}}}
-    raw_data = base64.b64encode(str(json.dumps(data,ensure_ascii=False)).encode()).decode("utf-8")
-    msg = f'[CQ:markdown,data=base64://{raw_data}]'
-    await bot.finish(ev, msg)
+    img_url = await upload_img(img)
+    data = ['头像表情包功能','img#500px #500px',img_url,'触发方式：<@古贺小春 + 关键词 + 图片/文字>\r发送 <表情详情 + 关键词> 查看表情参数和预览\r图片参数不足时将会使用发送者的头像\r暂不支持@他人作为图片参数\r','目前支持的表情列表见上图']
+    b = button_gen()
+    buttons = [b('试一试',' '),b('表情详情',' '),b('帮助','https://www.koharu.cn/docs/tool/tool.html#%E5%A4%B4%E5%83%8F%E8%A1%A8%E6%83%85%E5%8C%85',type_int=0)]
+    buttons = generate_buttons(buttons)
+    msg = generate_md(2,data,buttons)
+    await bot.send(ev, msg)
 
 @sv.on_prefix(("表情帮助", "表情示例", "表情详情"))
 async def info_cmd(bot: HoshinoBot, ev: CQEvent):
@@ -215,7 +203,7 @@ async def handle(bot: HoshinoBot, ev: CQEvent):
         return
     msg: Message = copy.deepcopy(ev.message)
     if not msg:
-        sv.logger.info("Empty msg, skip")
+        # sv.logger.info("Empty msg, skip")
         return
     if msg[0].type == "reply":
         # 当回复目标是自己时，去除隐式at自己
@@ -246,7 +234,7 @@ async def handle(bot: HoshinoBot, ev: CQEvent):
             trigger = each_msg
             break
         else:
-            sv.logger.info("Empty trigger, skip")
+            # sv.logger.info("Empty trigger, skip")
             return
 
     uid = get_user_id(ev)
@@ -254,10 +242,10 @@ async def handle(bot: HoshinoBot, ev: CQEvent):
         trigger_text: str = trigger.data["text"].split()[0]
         raw_trigger_text: str = trigger.data["text"].strip()
     except IndexError:
-        sv.logger.info("Empty trigger, skip")
+        # sv.logger.info("Empty trigger, skip")
         return
     if not trigger_text.startswith(meme_command_start):
-        sv.logger.info("Empty prefix, skip")
+        # sv.logger.info("Empty prefix, skip")
         return
     meme = await find_meme(
         trigger_text.replace(meme_command_start, "").strip(),
@@ -265,10 +253,10 @@ async def handle(bot: HoshinoBot, ev: CQEvent):
         bot, ev
     )
     if meme is None:
-        sv.logger.info("Empty meme, skip")
+        # sv.logger.info("Empty meme, skip")
         return
     if not meme_manager.check(uid, meme.key):
-        sv.logger.info("Blocked meme, skip")
+        # sv.logger.info("Blocked meme, skip")
         return
 
     split_msg = await split_msg_v11(bot, ev, msg, meme, trigger)
