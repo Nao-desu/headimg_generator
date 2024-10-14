@@ -104,7 +104,7 @@ async def help_cmd(bot: HoshinoBot, ev: CQEvent):
     img_url = await upload_img(img)
     data = ['头像表情包功能','img#500px #500px',img_url,'触发方式：<@古贺小春 + 关键词 + 图片/文字>\r发送 <表情详情 + 关键词> 查看表情参数和预览\r图片参数不足时将会使用发送者的头像\r暂不支持@他人作为图片参数\r','目前支持的表情列表见上图']
     b = button_gen
-    buttons = [b('试一试',' '),b('表情详情',' '),b('帮助','https://www.koharu.cn/docs/tool/tool.html#%E5%A4%B4%E5%83%8F%E8%A1%A8%E6%83%85%E5%8C%85',type_int=0)]
+    buttons = [[b('试一试',' '),b('表情详情',' '),b('帮助','https://www.koharu.cn/docs/tool/tool.html#%E5%A4%B4%E5%83%8F%E8%A1%A8%E6%83%85%E5%8C%85',type_int=0)]]
     buttons = generate_buttons(buttons)
     msg = generate_md(2,data,buttons)
     await bot.send(ev, msg)
